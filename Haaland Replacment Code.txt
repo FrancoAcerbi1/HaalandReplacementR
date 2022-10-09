@@ -1,0 +1,279 @@
+#All this Data was collected from the previous season, since we know that age and momentum that the player is going through are important, and also from the top 5 leagues in the world
+install.packages("fmsb")
+install.packages("tidyverse")
+install.packages("readxl")
+
+library(fmsb)
+library(tidyverse) 
+library(readxl)
+
+
+#Importing Data of all Fowards from the top 5 leagues in the world
+PlayersData <- read_excel("~/STU/Masters/Fundamental of Big Data Analytics/Project/Complete Data project.xlsx")
+
+#Examine the improted data
+View(PlayersData)
+head(PlayersData)
+summary(PlayersData)
+
+#In order to know which are the most relevant variables of players that influence the perfomance of the team, I create a new column in the data with players of the top 5 teams from the 5 main leagues in the world, which represent the succes of teams with the number 1, while the rest of the teams with the number 0
+PlayersData$Champ <- ifelse(PlayersData$Squad == "Manchester City" , 1,
+                            ifelse(PlayersData$Squad == "Bayern Munich", 1,
+                                   ifelse(PlayersData$Squad == "Real Madrid", 1,
+                                          ifelse(PlayersData$Squad == "Paris S-G", 1,
+                                                 ifelse(PlayersData$Squad =="Milan", 1,
+                                                        ifelse(PlayersData$Squad == "Liverpool", 1,
+                                                               ifelse(PlayersData$Squad == "Chelsea", 1,
+                                                                      ifelse(PlayersData$Squad == "Tottenham", 1,
+                                                                             ifelse(PlayersData$Squad == "Arsenal", 1,
+                                                                                    ifelse(PlayersData$Squad == "Barcelona", 1,
+                                                                                           ifelse(PlayersData$Squad == "Atletico", 1,
+                                                                                                  ifelse(PlayersData$Squad == "Sevilla", 1,
+                                                                                                         ifelse(PlayersData$Squad == "Real Betis", 1,
+                                                                                                                ifelse(PlayersData$Squad == "Marcellie" , 1,
+                                                                                                                       ifelse(PlayersData$Squad == "Monaco", 1,
+                                                                                                                              ifelse(PlayersData$Squad == "Rennes", 1,
+                                                                                                                                     ifelse(PlayersData$Squad == "Nice", 1,
+                                                                                                                                            ifelse(PlayersData$Squad == "Dormund", 1,
+                                                                                                                                                   ifelse(PlayersData$Squad == "Leverkusen", 1,
+                                                                                                                                                          ifelse(PlayersData$Squad == "Leipzig", 1,
+                                                                                                                                                                 ifelse(PlayersData$Squad == "Union Beling", 1,
+                                                                                                                                                                        ifelse(PlayersData$Squad == "Inter" , 1,
+                                                                                                                                                                               ifelse(PlayersData$Squad == "Napoli", 1,
+                                                                                                                                                                                      ifelse(PlayersData$Squad == "Juventus", 1,
+                                                                                                                                                                                             ifelse(PlayersData$Squad == "Lazio", 1, 0)))))))))))))))))))))))))
+
+#Regression -> In order to know the logistic regression model and evaluate the model's effectiveness I did this analysis which gave us the P Value of diferent factors depending if they were champions or not. I also had to create a new data frame so I could filter player with less than 18 games (less than half) in order to be able to have more precisely results
+
+PlayerForRegression <- filter(PlayersData, MP > 18 )
+RegressionAnalysis <- glm (Champ~GlsPer90 + AstPer90 + GCA90 + Drib + ShPer90 + GPerSoT + PCmpPer + Age,  data=PlayerForRegression, family=binomial(link="logit"))
+summary(RegressionAnalysis)
+#Now we know that GCA90, ShPer90, GPerSoT, and PCmpPer are four variables that have the smallest P value. So now we are going to run the analysis again wihtout GlsPer90, AstPer90, Drib, and Age. 
+RegressionAnalysis2 <- glm (Champ~GCA90 + ShPer90 + GPerSoT + PCmpPer, data=PlayerForRegression, family=binomial(link="logit"))
+summary(RegressionAnalysis2)
+
+
+#As in the linear regression case, there are tests to determine if the coefficients are significantly different from zero. Such significant coefficients correspond to small values of Pr ( > I z I } , which denote the p-value for the hypothesis test to determine if the estimated model parameter is significantly different from zero. 
+
+# In order to start having an idea of our project, I created this Scatterplot which is going to give us an overview of the most importat variables of our data.
+#First I create a new DataFrame called DataPlRegression with just the significant variables that we got in the analysis
+DataPlRegression <- select(PlayerForRegression, GCA90, ShPer90, GPerSoT, PCmpPer, Champ )
+
+#After that, I used this data frame to create the Scatterplot so we can view the pair-wise relationships between different variables.
+pairs(DataPlRegression)
+
+
+#Goals Analysis in all 5 Bigges Leagues in the World
+ggplot(data = PlayersData) + 
+  stat_summary(
+    mapping = aes(x = MP, y = Gls),
+    fun.min = min,
+    fun.max = max,
+    fun = median)
+#As we can see here, most of the time,  the amount of goals scored goes alonge with the amount of games played. So as much games you played more goals you have. In order to reduce this big difference we are going to be using the average of Goals Scored per 90 minutes (1 game). We are also going to filter the amount of player, taking  into consideration only players that has more than 15 games played last season.
+
+
+#Age Analysis in all 5 Bigges Leagues in the World
+summary(PlayersData$Age)
+
+ggplot(PlayersData) + 
+  geom_bar (mapping = aes(x = Age))
+
+#Its interesting how we can see that the distribution for age its almost a normal distribution,  with a mean of 24.73.
+
+ggplot(data = PlayersData, mapping = aes(x = Comp, y = Age, fill = Comp)) + 
+  geom_boxplot()
+
+# Different ligues have diferent rage of age between player, and as we can see the Bundesliga, where Borussia Dormund plays, has the youngest players. We have to focuse in youngh player so they can perform in this league.
+
+
+# Matches Played analysis in all 5 Bigges Leagues in the World
+summary(PlayersData$MP)
+
+ggplot(PlayersData) + 
+  geom_bar (mapping = aes(x = MP))
+
+#As we can see there are a lot of players that are not going to be relevant in our project since, out of 40 games that teams played they played less than 1/3.
+
+#Erling Halland Analysis.
+Erling_Haaland <- filter(PlayersData, Player == "Erling Haaland")
+view(Erling_Haaland)
+
+#I create a DataFrame with some of his most relevant data in order to have a base to find the most similar player to replace him.
+ErlingHaaland <- data.frame(GlsPer90 = c(1.04, 0 , 1.04),
+                            AstPer90 = c(0.51, 0 , 0.38),
+                            "G+APer90" = c(1.41 , 0 , 1.41),
+                            "GCA90" = c(1.13, 0, 0.66),
+                            "ShT/90" = c(1.85, 0, 1.46),
+                            "G/ShT" = c(0.58, 0, 0.52),
+                            DistSh = c(21.3, 0, 13.5),
+                            "PCmp%" = c(83.9 , 0 , 71.7),
+                            PrgDist90 = c(121 , 0 , 39.2),
+                            PPA = c(67 , 0 , 20 ))
+
+radarchart(ErlingHaaland, 
+           seg = 10,
+           title = "Haaland Radar Chart",
+           pfcol = scales::alpha("Black", 0.3),
+           plwd = 3)
+
+
+#Taking into consideration the Age, Matches Played, and Goals, I created another DataFrame called Players Fiter with player that are younger than 26, that have more than 15 matched played, and players that scored mroe than 15 goals last season, without including Haaland, in order to reduce the amout of player to study, and to take unsignificant players out of the research
+PlayersFilter <- filter(PlayersData, Age < 26 , MP > 15 , Gls >= 15 , Rk != 158 )
+view(PlayersFilter)
+
+
+#Graph N1 created in order to find the player that has the most goal creation Action per game.
+ggplot(PlayersFilter) + 
+  geom_point(mapping = aes(x = MP, y = GCA90, color = Player), shape = 15 , size = 5) +
+  scale_color_manual(values = c("blue", "red", "orange", "pink", "purple", "black", "brown", "yellow", "grey", "violet", "chartreuse", "coral", "lightgray", "lightblue" ))
+# As we can see in this plot Kylian Mbappe 1, Christopher Nkunku 1, Vinicius Junior 1, Patrik Schinck 1, and Moussa Dembele 1 have the Best Numbers
+
+
+
+#Graph N2 Created in order to find the player that have the most Shots per game.
+ggplot(PlayersFilter) + 
+  geom_point(mapping = aes(x = MP, y = ShPer90, color = Player), shape = 15 , size = 5) +
+  scale_color_manual(values = c("blue", "red", "orange", "pink", "purple", "black", "brown", "yellow", "grey", "violet", "chartreuse", "coral", "lightgray", "lightblue" ))
+#In this case we can see tha Lautaro Martinez 1, Kylian Mbappe 2, Patrik Schinck 2,  Diogo Jota 1, and Moussa Dembele 2 apear with the best amount of shots per game.
+
+
+
+#Graph N3 Created in order to find the player that have the most Goals Per Shot on Target, to get the accuracy and effectivines of players in from of the goal.	
+ggplot(PlayersFilter) + 
+  geom_point(mapping = aes(x = MP, y = GPerSoT , color = Player), shape = 15 , size = 5) +
+  scale_color_manual(values = c("blue", "red", "orange", "pink", "purple", "black", "brown", "yellow", "grey", "violet", "chartreuse", "coral", "lightgray", "lightblue" ))
+#Enes Unal 1, and Patrik Schivk 3, who are above the 0.5, so statistically they would score more than 1 goal every 2 shots. Christopher Nkunku 2, and Diogo Jota 2 who are above 0.45.
+
+
+
+#Graph N4 Created in order to find the player that get the Passes Completed percentage, in order to get ability of players on keepping posession and not loosing the ball.	
+ggplot(PlayersFilter) + 
+  geom_point(mapping = aes(x = MP, y = PCmpPer, color = Player), shape = 15 , size = 5) +
+  scale_color_manual(values = c("blue", "red", "orange", "pink", "purple", "black", "brown", "yellow", "grey", "violet", "chartreuse", "coral", "lightgray", "lightblue" ))
+#Vinicius Junior 2, Christopher Nkunku 3, Kylian Mbappe 3, Martin Terrier 1, and Jonathan David 1
+
+
+#Players selected since those are the players with best number on signinfican variables. atrik Schivk 3 , Christopher Nkunku 3, Kylian Mbappe 3, Moussa Dembele 2, Diogo Jota 2, Vinicius Junior 2
+TopPlayers <- filter(PlayersData, Player == "Erling Haaland" |Player == "Kylian Mbappé" |Player == "Patrik Schick"|Player == "Christopher Nkunku" |Player == "Moussa Dembélé" |Player == "Diogo Jota"|Player == "Vinicius Júnior")
+view(TopPlayers)
+
+
+#Radarchart1 of the comparation betewen Haaland and Mbape
+HaalandVSMbape <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 0.83),
+                             AstPer90 = c(0.51, 0 , 0.38, 0.51),
+                             "G+APer90" = c(1.41 , 0 , 1.41, 1.34),
+                             "GCA90" = c(1.13, 0, 0.66, 1.13),
+                             "ShT/90" = c(1.85, 0, 1.46, 1.79),
+                             "G/ShT" = c(0.58, 0, 0.52, 0.4),
+                             DistSh = c(21.3, 0, 13.5, 16.8),
+                             "PCmp%" = c(83.9 , 0 , 71.7, 80.2),
+                             PrgDist90 = c(121 , 0 , 39.2, 101.8),
+                             PPA = c(67 , 0 , 20, 60),
+                             row.names = c("max", "min", "Erling Haaland ", "Kylian Mbappé"))
+
+radarchart(HaalandVSMbape, 
+           seg = 10,  
+           title = "Haaland VS Mbape",
+           pcol = c("black", "blue") ,
+           plwd = 2)
+
+
+#Radarchart2 of the comparation betewen Haaland and PatrikSchick
+HaalandVSPatrikSchick <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 1.04),
+                                    AstPer90 = c(0.51, 0 , 0.38, 0.13),
+                                    "G+APer90" = c(1.41 , 0 , 1.41, 1.17),
+                                    "GCA90" = c(1.13, 0, 0.66, 0.69),
+                                    "ShT/90" = c(1.85, 0, 1.46, 1.82),
+                                    "G/ShT" = c(0.58, 0, 0.52, 0.55),
+                                    DistSh = c(21.3, 0, 13.5, 12.6),
+                                    "PCmp%" = c(83.9 , 0 , 71.7, 71.2),
+                                    PrgDist90 = c(121 , 0 , 39.2, 31.9),
+                                    PPA = c(67 , 0 , 20, 10),
+                                    row.names = c("max", "min", "Erling Haaland ", "Patrik Schick"))
+
+radarchart(HaalandVSPatrikSchick , 
+           seg = 10,  
+           title = "Haaland VS Schick",
+           pcol = c("black", "red") ,
+           plwd = 2)
+
+
+#Radarchart3 of the comparation betewen Haaland and Nkunku
+HaalandVSNkunku <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 0.66),
+                              AstPer90 = c(0.51, 0 , 0.38, 0.43),
+                              "G+APer90" = c(1.41 , 0 , 1.41, 1.09),
+                              "GCA90" = c(1.13, 0, 0.66, 0.93),
+                              "ShT/90" = c(1.85, 0, 1.46, 1.29),
+                              "G/ShT" = c(0.58, 0, 0.52, 0.49),
+                              DistSh = c(21.3, 0, 13.5, 15.7),
+                              "PCmp%" = c(83.9 , 0 , 71.7, 80.1),
+                              PrgDist90 = c(121 , 0 , 39.2, 110.8),
+                              PPA = c(67 , 0 , 20, 58),
+                              row.names = c("max", "min", "Erling Haaland ", "Christopher Nkunku"))
+
+radarchart(HaalandVSNkunku , 
+           seg = 10,  
+           title = "Haaland VS Nkunku",
+           pcol = c("black", "gold") ,
+           plwd = 2)
+
+
+#Radarchart4 of the comparation betewen Haaland and Moussa Dembélé
+HaalandVSDembélé <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 0.86),
+                               AstPer90 = c(0.51, 0 , 0.38, 0.16),
+                               "G+APer90" = c(1.41 , 0 , 1.41, 1.02),
+                               "GCA90" = c(1.13, 0, 0.66, 0.61),
+                               "ShT/90" = c(1.85, 0, 1.46, 1.51),
+                               "G/ShT" = c(0.58, 0, 0.52, 0.43),
+                               DistSh = c(21.3, 0, 13.5, 12),
+                               "PCmp%" = c(83.9 , 0 , 71.7, 69.5),
+                               PrgDist90 = c(121 , 0 , 39.2, 19.8),
+                               PPA = c(67 , 0 , 20, 7),
+                               row.names = c("max", "min", "Erling Haaland ", "Moussa Dembélé"))
+
+radarchart(HaalandVSDembélé , 
+           seg = 10,  
+           title = "Haaland VS Dembélé",
+           pcol = c("black", "orange") ,
+           plwd = 2)
+
+
+#Radarchart5 of the comparation betewen Haaland and Diogo Jota
+HaalandVSDiogoJota <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 0.57),
+                                 AstPer90 = c(0.51, 0 , 0.38, 0.15),
+                                 "G+APer90" = c(1.41 , 0 , 1.41, 0.72),
+                                 "GCA90" = c(1.13, 0, 0.66, 0.53),
+                                 "ShT/90" = c(1.85, 0, 1.46, 1.26),
+                                 "G/ShT" = c(0.58, 0, 0.52, 0.45),
+                                 DistSh = c(21.3, 0, 13.5, 11.8),
+                                 "PCmp%" = c(83.9 , 0 , 71.7, 73.7),
+                                 PrgDist90 = c(121 , 0 , 39.2, 101.6),
+                                 PPA = c(67 , 0 , 20, 31),
+                                 row.names = c("max", "min", "Erling Haaland ", "Diogo Jota"))
+
+radarchart(HaalandVSDiogoJota , 
+           seg = 10,  
+           title = "Haaland VS Diogo Jota",
+           pcol = c("black", "green") ,
+           plwd = 2)
+
+
+#Radarchart6 of the comparation betewen Haaland and Vinicius Júnior
+HaalandVSVinicius <- data.frame(GlsPer90 = c(1.04, 0 , 1.04, 0.57),
+                                AstPer90 = c(0.51, 0 , 0.38, 0.33),
+                                "G+APer90" = c(1.41 , 0 , 1.41, 0.9),
+                                "GCA90" = c(1.13, 0, 0.66, 0.84),
+                                "ShT/90" = c(1.85, 0, 1.46, 1.41),
+                                "G/ShT" = c(0.58, 0, 0.52, 0.4),
+                                DistSh = c(21.3, 0, 13.5, 15),
+                                "PCmp%" = c(83.9 , 0 , 71.7, 83.9),
+                                PrgDist90 = c(121 , 0 , 39.2, 121.0),
+                                PPA = c(67 , 0 , 20, 67),
+                                row.names = c("max", "min", "Erling Haaland ", "Vinicius Júnior"))
+
+radarchart(HaalandVSVinicius , 
+           seg = 10,  
+           title = "Haaland VS Vinicius Júnior",
+           pcol = c("black", "Purple") ,
+           plwd = 2)
